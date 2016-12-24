@@ -4,9 +4,13 @@ import com.kauailabs.navx.frc.AHRS;
 
 import edu.wpi.first.wpilibj.CANTalon;
 import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.PIDController;
+import edu.wpi.first.wpilibj.PIDOutput;
 import edu.wpi.first.wpilibj.SPI;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
@@ -16,28 +20,65 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
  * creating this project, you must also update the manifest file in the resource
  * directory.
  */
-public class Robot extends IterativeRobot
+public class Robot extends IterativeRobot implements PIDOutput
     {
-        AHRS sensor = new AHRS(SPI.Port.kMXP, (byte) 200);
-        DigitalInput sensor2 = new DigitalInput(0);
+        private static final AHRS IMU;
+        static
+            {
+                AHRS temp = null;
+                try
+                    {
+                        temp = new AHRS(SPI.Port.kMXP, (byte) 120);
+                    }
+                catch(RuntimeException e)
+                    {
+                        DriverStation.reportError("Error instantiating navX-MXP:  " + e.getMessage(), true);
+                        System.exit(1);
+                    }
+                IMU = temp;
+            }
 
-        CANTalon DriveL1 = new CANTalon(1);
-        CANTalon DriveL2 = new CANTalon(2);
-        CANTalon DriveR1 = new CANTalon(3);
-        CANTalon DriveR2 = new CANTalon(4);
+        private static final CANTalon DRIVEL1 = new CANTalon(1);
+        private static final CANTalon DRIVEL2 = new CANTalon(2);
+        private static final CANTalon DRIVER1 = new CANTalon(3);
+        private static final CANTalon DRIVER2 = new CANTalon(4);
 
-        Joystick xbox = new Joystick(0);
+        private static final Joystick XBOX = new Joystick(0);
+        private static final DigitalInput HALL_SENSOR = new DigitalInput(0);
 
-        double speed;
-        boolean button;
-        boolean reverse;
-        int autoCounter;
-        float heading;
-        float targetHeading;
-        float accel;
-        float accelPeak;
-        float targetCounter;
-        int stateCount;
+        private static final double kP = 0.00; // This constant is not final, and needs to be updated!
+        private static final double kI = 0.00; // This constant is not final, and needs to be updated!
+        private static final double kD = 0.00; // This constant is not final, and needs to be updated!
+        private static final double kF = 0.00; // This constant is not final, and needs to be updated!
+        private static final double kToleranceDegrees = 0.0; // This constant is not final, and needs to be updated!
+
+        private static final int turnAngle = 180;
+
+        private static enum State
+            {
+            INITIALIZING,
+            MOVING_FORWARDS,
+            TURNING,
+            MOVING_BACKWARDS,
+            STOPPING
+            }
+
+        private static State currentState;
+
+        private static PIDController turnController;
+
+        private static float heading;
+        private static float targetHeading;
+        private static float acceleration;
+        private static float peakAcceleration;
+
+        private static double speed;
+        private static double rotateToAngleRate;
+
+        private static boolean reverse;
+
+        private static int driveTimeCounter;
+        private static int targetAngleCounter;
 
         /**
          * This function is run when the robot is first started up and should be
@@ -46,21 +87,28 @@ public class Robot extends IterativeRobot
         @Override
         public void robotInit()
             {
-                while(this.sensor.isCalibrating())
+                while(Robot.IMU.isCalibrating())
                     {
                     }
-                this.sensor.reset();
-                this.sensor.zeroYaw();
+                Robot.IMU.reset();
+                Robot.IMU.zeroYaw();
 
-                this.heading = this.sensor.getFusedHeading();
-                SmartDashboard.putNumber("Heading in Degrees:", this.heading);
-                this.accel = 0;
-                SmartDashboard.putNumber("Acceleration in G's:", this.accel);
-                this.accelPeak = this.accel;
-                SmartDashboard.putNumber("Peak Acceleration in G's:", this.accelPeak);
-                this.targetHeading = 0;
-                SmartDashboard.putNumber("Target Heading in Degrees:", this.targetHeading);
-                SmartDashboard.putBoolean("Hall Effect Sensor:", this.sensor2.get());
+                Robot.currentState = State.INITIALIZING;
+                Robot.heading = Robot.IMU.getFusedHeading();
+                SmartDashboard.putNumber("Heading in Degrees:", Robot.heading);
+                Robot.acceleration = 0;
+                SmartDashboard.putNumber("Acceleration in G's:", Robot.acceleration);
+                Robot.peakAcceleration = Robot.acceleration;
+                SmartDashboard.putNumber("Peak Acceleration in G's:", Robot.peakAcceleration);
+                Robot.targetHeading = 0;
+                SmartDashboard.putNumber("Target Heading in Degrees:", Robot.targetHeading);
+                SmartDashboard.putBoolean("Hall Effect Sensor:", Robot.HALL_SENSOR.get());
+
+                turnController = new PIDController(kP, kI, kD, kF, IMU, this);
+                turnController.setInputRange(0, 360);
+                turnController.setOutputRange(-1.0, 1.0);
+                turnController.setAbsoluteTolerance(kToleranceDegrees);
+                turnController.setContinuous(true);
             }
 
         /**
@@ -77,20 +125,20 @@ public class Robot extends IterativeRobot
         @Override
         public void autonomousInit()
             {
-                this.autoCounter = 0;
-                this.targetCounter = 0;
-                this.stateCount = 0;
-                this.reverse = false;
-                this.speed = 0.25;
+                Robot.driveTimeCounter = 0;
+                Robot.targetAngleCounter = 0;
+                Robot.speed = 0.25;
+                Robot.reverse = false;
 
-                this.heading = this.sensor.getFusedHeading();
-                SmartDashboard.putNumber("Heading in Degrees:", this.heading);
-                this.targetHeading = this.heading - 180;
-                if(this.targetHeading < 0)
+                Robot.heading = Robot.IMU.getFusedHeading();
+                SmartDashboard.putNumber("Heading in Degrees:", Robot.heading);
+                Robot.targetHeading = Robot.heading - Robot.turnAngle;
+                if(Robot.targetHeading < 0)
                     {
-                        this.targetHeading += 360;
+                        Robot.targetHeading += 360;
                     }
-                SmartDashboard.putNumber("Target Heading in Degrees:", this.targetHeading);
+                SmartDashboard.putNumber("Target Heading in Degrees:", Robot.targetHeading);
+                Robot.currentState = State.MOVING_FORWARDS;
             }
 
         /**
@@ -99,83 +147,57 @@ public class Robot extends IterativeRobot
         @Override
         public void autonomousPeriodic()
             {
-                this.heading = this.sensor.getFusedHeading();
-                SmartDashboard.putNumber("Heading in Degrees:", this.heading);
+                Robot.heading = Robot.IMU.getFusedHeading();
+                SmartDashboard.putNumber("Heading in Degrees:", Robot.heading);
 
-                if(this.stateCount == 0)
+                switch(Robot.currentState)
                     {
-                        if(this.autoCounter < 100)
-                            {
-                                this.Drive(-1, -1);
-                                this.autoCounter++;
-                            }
-                        if(this.autoCounter == 200)
-                            {
-                                this.stateCount++;
-                            }
-                    }
+                        case MOVING_FORWARDS:
+                            if(Robot.driveTimeCounter < 100)
+                                {
+                                    Robot.Drive(-1, -1);
+                                    Robot.driveTimeCounter++;
+                                }
+                            if(Robot.driveTimeCounter == 200)
+                                {
+                                    Robot.currentState = State.TURNING;
+                                }
 
-                if(this.stateCount == 1)
-                    {
-                        float offset = this.targetHeading - this.heading;
-                        if(offset > 180)
-                            {
-                                offset -= 360;
-                            }
-                        if(offset < -180)
-                            {
-                                offset += 360;
-                            }
+                        case TURNING:
+                            float offset = Robot.targetHeading - Robot.heading;
+                            if(offset > kToleranceDegrees)
+                                {
+                                    turnController.setSetpoint(targetHeading);
+                                    turnController.enable();
+                                    double currentRotationRate = rotateToAngleRate;
+                                    Robot.Drive(currentRotationRate, -1 * currentRotationRate);
+                                    Timer.delay(0.005);
+                                    targetAngleCounter = 0;
+                                }
+                            else
+                                {
+                                    Robot.Drive(0, 0);
+                                    Robot.targetAngleCounter++;
+                                    if(Robot.targetAngleCounter > 25)
+                                        {
+                                            Robot.currentState = State.MOVING_BACKWARDS;
+                                            Robot.driveTimeCounter = 0;
+                                        }
+                                }
 
-                        if(Math.abs(offset / 45) < 0.175)
-                            {
-                                this.speed = 0.175;
-                            }
-                        else if(Math.abs(offset / 45) > 0.375)
-                            {
-                                this.speed = 0.375;
-                            }
-                        else
-                            {
-                                this.speed = Math.abs(offset / 45);
-                            }
+                        case MOVING_BACKWARDS:
+                            if(Robot.driveTimeCounter < 100)
+                                {
+                                    Robot.Drive(-1, -1);
+                                    Robot.driveTimeCounter++;
+                                }
+                            if(Robot.driveTimeCounter == 200)
+                                {
+                                    Robot.currentState = State.STOPPING;
+                                }
 
-                        if(offset > 2)
-                            {
-                                this.Drive(-1, 1);
-                            }
-                        else if(offset < -2)
-                            {
-                                this.Drive(1, -1);
-                            }
-                        else
-                            {
-                                this.Drive(0, 0);
-                                this.targetCounter++;
-                                if(this.targetCounter > 50)
-                                    {
-                                        this.stateCount++;
-                                        this.autoCounter = 0;
-                                    }
-                            }
-                    }
-
-                if(this.stateCount == 2)
-                    {
-                        if(this.autoCounter < 100)
-                            {
-                                this.Drive(-1, -1);
-                                this.autoCounter++;
-                            }
-                        if(this.autoCounter == 200)
-                            {
-                                this.stateCount++;
-                            }
-                    }
-
-                if(this.stateCount == 3)
-                    {
-                        this.Drive(0, 0);
+                        default:
+                            Robot.Drive(0, 0);
                     }
             }
 
@@ -185,70 +207,75 @@ public class Robot extends IterativeRobot
         @Override
         public void teleopPeriodic()
             {
-                SmartDashboard.putBoolean("Hall Effect Sensor:", this.sensor2.get());
+                SmartDashboard.putBoolean("Hall Effect Sensor:", Robot.HALL_SENSOR.get());
 
                 // LB - full speed
                 // RB - half speed
 
-                if(this.xbox.getRawButton(5))
+                if(Robot.XBOX.getRawButton(5))
                     {
-                        this.speed = 1;
+                        Robot.speed = 1;
                     }
-                if(this.xbox.getRawButton(6))
+                if(Robot.XBOX.getRawButton(6))
                     {
-                        this.speed = 0.5;
+                        Robot.speed = 0.5;
                     }
 
-                this.Drive(this.xbox.getRawAxis(1), this.xbox.getRawAxis(3));
+                Robot.Drive(Robot.XBOX.getRawAxis(1), Robot.XBOX.getRawAxis(3));
 
                 // BACK - reverse
                 // START - forwards
 
-                if(this.xbox.getRawButton(7))
+                if(Robot.XBOX.getRawButton(7))
                     {
-                        this.reverse = true;
+                        Robot.reverse = true;
                     }
-                if(this.xbox.getRawButton(7) == true)
+                if(Robot.XBOX.getRawButton(7) == true)
                     {
-                        this.xbox.setRumble(Joystick.RumbleType.kLeftRumble, 1);
+                        Robot.XBOX.setRumble(Joystick.RumbleType.kLeftRumble, 1);
                     }
                 else
                     {
-                        this.xbox.setRumble(Joystick.RumbleType.kLeftRumble, 0);
+                        Robot.XBOX.setRumble(Joystick.RumbleType.kLeftRumble, 0);
                     }
 
-                if(this.xbox.getRawButton(8))
+                if(Robot.XBOX.getRawButton(8))
                     {
-                        this.reverse = false;
+                        Robot.reverse = false;
                     }
 
-                this.heading = this.sensor.getFusedHeading();
-                SmartDashboard.putNumber("Heading in Degrees:", this.heading);
-                this.accel = this.sensor.getWorldLinearAccelX();
-                SmartDashboard.putNumber("Acceleration in G's:", this.accel);
-                if(this.accelPeak < this.accel)
+                Robot.heading = Robot.IMU.getFusedHeading();
+                SmartDashboard.putNumber("Heading in Degrees:", Robot.heading);
+                Robot.acceleration = Robot.IMU.getWorldLinearAccelX();
+                SmartDashboard.putNumber("Acceleration in G's:", Robot.acceleration);
+                if(Robot.peakAcceleration < Robot.acceleration)
                     {
-                        this.accelPeak = this.accel;
-                        SmartDashboard.putNumber("Peak Acceleration in G's:", this.accelPeak);
+                        Robot.peakAcceleration = Robot.acceleration;
+                        SmartDashboard.putNumber("Peak Acceleration in G's:", Robot.peakAcceleration);
                     }
             }
-
-        private void Drive(double driveL, double driveR)
+            
+        @Override
+        public void pidWrite(double output)
             {
-                if(this.reverse)
+                rotateToAngleRate = output;
+            }
+            
+        private static void Drive(double driveL, double driveR)
+            {
+                if(Robot.reverse)
                     {
-                        this.DriveL1.set(driveR * this.speed * -1);
-                        this.DriveL2.set(driveR * this.speed * -1);
-                        this.DriveR1.set(driveL * this.speed);
-                        this.DriveR2.set(driveL * this.speed);
+                        Robot.DRIVEL1.set(driveR * Robot.speed * -1);
+                        Robot.DRIVEL2.set(driveR * Robot.speed * -1);
+                        Robot.DRIVER1.set(driveL * Robot.speed);
+                        Robot.DRIVER2.set(driveL * Robot.speed);
                     }
                 else
                     {
-                        this.DriveL1.set(driveL * this.speed * -1);
-                        this.DriveL2.set(driveL * this.speed * -1);
-                        this.DriveR1.set(driveR * this.speed);
-                        this.DriveR2.set(driveR * this.speed);
+                        Robot.DRIVEL1.set(driveL * Robot.speed * -1);
+                        Robot.DRIVEL2.set(driveL * Robot.speed * -1);
+                        Robot.DRIVER1.set(driveR * Robot.speed);
+                        Robot.DRIVER2.set(driveR * Robot.speed);
                     }
             }
-
     }
