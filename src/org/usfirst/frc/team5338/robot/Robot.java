@@ -35,23 +35,23 @@ public class Robot extends IterativeRobot implements PIDOutput
                     }
                 IMU = temp;
             }
-            
+
         private static final CANTalon DRIVEL1 = new CANTalon(1);
         private static final CANTalon DRIVEL2 = new CANTalon(2);
         private static final CANTalon DRIVER1 = new CANTalon(3);
         private static final CANTalon DRIVER2 = new CANTalon(4);
-        
+
         private static final Joystick XBOX = new Joystick(0);
         private static final DigitalInput HALL_SENSOR = new DigitalInput(0);
-
+        
         //        private static final double kP = 0.00; // This constant is not final, and needs to be updated!
         //        private static final double kI = 0.00; // This constant is not final, and needs to be updated!
         //        private static final double kD = 0.00; // This constant is not final, and needs to be updated!
         //        private static final double kF = 0.00; // This constant is not final, and needs to be updated!
         //        private static final double kToleranceDegrees = 0.0; // This constant is not final, and needs to be updated!
-        
+
         private static final int turnAngle = 180;
-        
+
         private static enum State
             {
             INITIALIZING,
@@ -60,22 +60,22 @@ public class Robot extends IterativeRobot implements PIDOutput
             MOVING_BACKWARDS,
             STOPPING
             }
-            
+
         private static State currentState;
-        
+
         //private static PIDController turnController;
-        
+
         private static float heading;
         private static float targetHeading;
         private static float acceleration;
         private static float peakAcceleration;
-        
+
         private static double speed;
         private static boolean reverse;
-        
+
         private static int driveTimeCounter;
         private static int targetAngleCounter;
-
+        
         /**
          * This function is run when the robot is first started up and should be
          * used for any initialization code.
@@ -88,7 +88,7 @@ public class Robot extends IterativeRobot implements PIDOutput
                     }
                 Robot.IMU.reset();
                 Robot.IMU.zeroYaw();
-                
+
                 Robot.currentState = State.INITIALIZING;
                 Robot.heading = Robot.IMU.getFusedHeading();
                 SmartDashboard.putNumber("Heading in Degrees:", Robot.heading);
@@ -99,14 +99,14 @@ public class Robot extends IterativeRobot implements PIDOutput
                 Robot.targetHeading = 0;
                 SmartDashboard.putNumber("Target Heading in Degrees:", Robot.targetHeading);
                 SmartDashboard.putBoolean("Hall Effect Sensor:", Robot.HALL_SENSOR.get());
-
+                
                 //                turnController = new PIDController(kP, kI, kD, kF, IMU, this);
                 //                turnController.setInputRange(0, 360);
                 //                turnController.setOutputRange(-1.0, 1.0);
                 //                turnController.setAbsoluteTolerance(kToleranceDegrees);
                 //                turnController.setContinuous(true);
             }
-            
+
         /**
          * This autonomous (along with the chooser code above) shows how to
          * select between different autonomous modes using the dashboard. The
@@ -124,7 +124,7 @@ public class Robot extends IterativeRobot implements PIDOutput
                 Robot.driveTimeCounter = 0;
                 Robot.speed = 0.25;
                 Robot.reverse = false;
-                
+
                 Robot.heading = Robot.IMU.getFusedHeading();
                 SmartDashboard.putNumber("Heading in Degrees:", Robot.heading);
                 Robot.targetHeading = Robot.heading - Robot.turnAngle;
@@ -135,7 +135,7 @@ public class Robot extends IterativeRobot implements PIDOutput
                 SmartDashboard.putNumber("Target Heading in Degrees:", Robot.targetHeading);
                 Robot.currentState = State.MOVING_FORWARDS;
             }
-            
+
         /**
          * This function is called periodically during autonomous
          */
@@ -144,7 +144,7 @@ public class Robot extends IterativeRobot implements PIDOutput
             {
                 Robot.heading = Robot.IMU.getFusedHeading();
                 SmartDashboard.putNumber("Heading in Degrees:", Robot.heading);
-                
+
                 switch(Robot.currentState)
                     {
                         case MOVING_FORWARDS:
@@ -157,7 +157,7 @@ public class Robot extends IterativeRobot implements PIDOutput
                                 {
                                     Robot.currentState = State.TURNING;
                                 }
-                                
+
                         case TURNING:
                             float offset = Robot.targetHeading - Robot.heading;
                             if(offset > 180)
@@ -168,7 +168,7 @@ public class Robot extends IterativeRobot implements PIDOutput
                                 {
                                     offset += 360;
                                 }
-                                
+
                             if(Math.abs(offset / 45) < 0.175)
                                 {
                                     Robot.speed = 0.175;
@@ -181,7 +181,7 @@ public class Robot extends IterativeRobot implements PIDOutput
                                 {
                                     Robot.speed = Math.abs(offset / 45);
                                 }
-                                
+
                             if(offset > 2)
                                 {
                                     Robot.Drive(-1, 1);
@@ -220,7 +220,7 @@ public class Robot extends IterativeRobot implements PIDOutput
                             //                                            Robot.driveTimeCounter = 0;
                             //                                        }
                             //                                }
-                            
+
                         case MOVING_BACKWARDS:
                             if(Robot.driveTimeCounter < 100)
                                 {
@@ -231,12 +231,12 @@ public class Robot extends IterativeRobot implements PIDOutput
                                 {
                                     Robot.currentState = State.STOPPING;
                                 }
-                                
+
                         default:
                             Robot.Drive(0, 0);
                     }
             }
-            
+
         /**
          * This function is called periodically during operator control
          */
@@ -244,10 +244,10 @@ public class Robot extends IterativeRobot implements PIDOutput
         public void teleopPeriodic()
             {
                 SmartDashboard.putBoolean("Hall Effect Sensor:", Robot.HALL_SENSOR.get());
-                
+
                 // LB - full speed
                 // RB - half speed
-                
+
                 if(Robot.XBOX.getRawButton(5))
                     {
                         Robot.speed = 1;
@@ -256,12 +256,12 @@ public class Robot extends IterativeRobot implements PIDOutput
                     {
                         Robot.speed = 0.5;
                     }
-                    
+
                 Robot.Drive(Robot.XBOX.getRawAxis(1), Robot.XBOX.getRawAxis(3));
-                
+
                 // BACK - reverse
                 // START - forwards
-                
+
                 if(Robot.XBOX.getRawButton(7))
                     {
                         Robot.reverse = true;
@@ -274,12 +274,12 @@ public class Robot extends IterativeRobot implements PIDOutput
                     {
                         Robot.XBOX.setRumble(Joystick.RumbleType.kLeftRumble, 0);
                     }
-                    
+
                 if(Robot.XBOX.getRawButton(8))
                     {
                         Robot.reverse = false;
                     }
-                    
+
                 Robot.heading = Robot.IMU.getFusedHeading();
                 SmartDashboard.putNumber("Heading in Degrees:", Robot.heading);
                 Robot.acceleration = Robot.IMU.getWorldLinearAccelX();
@@ -290,12 +290,12 @@ public class Robot extends IterativeRobot implements PIDOutput
                         SmartDashboard.putNumber("Peak Acceleration in Gs:", Robot.peakAcceleration);
                     }
             }
-            
+
         @Override
         public void pidWrite(double output)
             {
             }
-            
+
         private static void Drive(double driveL, double driveR)
             {
                 if(Robot.reverse)
