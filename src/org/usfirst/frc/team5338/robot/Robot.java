@@ -7,10 +7,8 @@ import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.Joystick;
-import edu.wpi.first.wpilibj.PIDController;
 import edu.wpi.first.wpilibj.PIDOutput;
 import edu.wpi.first.wpilibj.SPI;
-import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 /**
@@ -45,12 +43,12 @@ public class Robot extends IterativeRobot implements PIDOutput
         
         private static final Joystick XBOX = new Joystick(0);
         private static final DigitalInput HALL_SENSOR = new DigitalInput(0);
-        
-        private static final double kP = 0.00; // This constant is not final, and needs to be updated!
-        private static final double kI = 0.00; // This constant is not final, and needs to be updated!
-        private static final double kD = 0.00; // This constant is not final, and needs to be updated!
-        private static final double kF = 0.00; // This constant is not final, and needs to be updated!
-        private static final double kToleranceDegrees = 0.0; // This constant is not final, and needs to be updated!
+
+        //        private static final double kP = 0.00; // This constant is not final, and needs to be updated!
+        //        private static final double kI = 0.00; // This constant is not final, and needs to be updated!
+        //        private static final double kD = 0.00; // This constant is not final, and needs to be updated!
+        //        private static final double kF = 0.00; // This constant is not final, and needs to be updated!
+        //        private static final double kToleranceDegrees = 0.0; // This constant is not final, and needs to be updated!
         
         private static final int turnAngle = 180;
         
@@ -65,7 +63,7 @@ public class Robot extends IterativeRobot implements PIDOutput
             
         private static State currentState;
         
-        private static PIDController turnController;
+        //private static PIDController turnController;
         
         private static float heading;
         private static float targetHeading;
@@ -73,13 +71,11 @@ public class Robot extends IterativeRobot implements PIDOutput
         private static float peakAcceleration;
         
         private static double speed;
-        private static double rotateToAngleRate;
-        
         private static boolean reverse;
         
         private static int driveTimeCounter;
         private static int targetAngleCounter;
-        
+
         /**
          * This function is run when the robot is first started up and should be
          * used for any initialization code.
@@ -103,12 +99,12 @@ public class Robot extends IterativeRobot implements PIDOutput
                 Robot.targetHeading = 0;
                 SmartDashboard.putNumber("Target Heading in Degrees:", Robot.targetHeading);
                 SmartDashboard.putBoolean("Hall Effect Sensor:", Robot.HALL_SENSOR.get());
-                
-                turnController = new PIDController(kP, kI, kD, kF, IMU, this);
-                turnController.setInputRange(0, 360);
-                turnController.setOutputRange(-1.0, 1.0);
-                turnController.setAbsoluteTolerance(kToleranceDegrees);
-                turnController.setContinuous(true);
+
+                //                turnController = new PIDController(kP, kI, kD, kF, IMU, this);
+                //                turnController.setInputRange(0, 360);
+                //                turnController.setOutputRange(-1.0, 1.0);
+                //                turnController.setAbsoluteTolerance(kToleranceDegrees);
+                //                turnController.setContinuous(true);
             }
             
         /**
@@ -126,7 +122,6 @@ public class Robot extends IterativeRobot implements PIDOutput
         public void autonomousInit()
             {
                 Robot.driveTimeCounter = 0;
-                Robot.targetAngleCounter = 0;
                 Robot.speed = 0.25;
                 Robot.reverse = false;
                 
@@ -158,40 +153,81 @@ public class Robot extends IterativeRobot implements PIDOutput
                                     Robot.Drive(-1, -1);
                                     Robot.driveTimeCounter++;
                                 }
-                            if(Robot.driveTimeCounter == 200)
+                            if(Robot.driveTimeCounter == 100)
                                 {
                                     Robot.currentState = State.TURNING;
                                 }
                                 
                         case TURNING:
                             float offset = Robot.targetHeading - Robot.heading;
-                            if(offset > kToleranceDegrees)
+                            if(offset > 180)
                                 {
-                                    turnController.setSetpoint(targetHeading);
-                                    turnController.enable();
-                                    double currentRotationRate = rotateToAngleRate;
-                                    Robot.Drive(currentRotationRate, -1 * currentRotationRate);
-                                    Timer.delay(0.005);
-                                    targetAngleCounter = 0;
+                                    offset -= 360;
+                                }
+                            if(offset < -180)
+                                {
+                                    offset += 360;
+                                }
+                                
+                            if(Math.abs(offset / 45) < 0.175)
+                                {
+                                    Robot.speed = 0.175;
+                                }
+                            else if(Math.abs(offset / 45) > 0.375)
+                                {
+                                    Robot.speed = 0.375;
+                                }
+                            else
+                                {
+                                    Robot.speed = Math.abs(offset / 45);
+                                }
+                                
+                            if(offset > 2)
+                                {
+                                    Robot.Drive(-1, 1);
+                                }
+                            else if(offset < -2)
+                                {
+                                    Robot.Drive(1, -1);
                                 }
                             else
                                 {
                                     Robot.Drive(0, 0);
                                     Robot.targetAngleCounter++;
-                                    if(Robot.targetAngleCounter > 25)
+                                    if(Robot.targetAngleCounter == 25)
                                         {
                                             Robot.currentState = State.MOVING_BACKWARDS;
                                             Robot.driveTimeCounter = 0;
                                         }
                                 }
-                                
+                            //                            float offset = Robot.targetHeading - Robot.heading;
+                            //                            if(offset > kToleranceDegrees)
+                            //                                {
+                            //                                    turnController.setSetpoint(targetHeading);
+                            //                                    turnController.enable();
+                            //                                    double currentRotationRate = rotateToAngleRate;
+                            //                                    Robot.Drive(currentRotationRate, -1 * currentRotationRate);
+                            //                                    Timer.delay(0.005);
+                            //                                    targetAngleCounter = 0;
+                            //                                }
+                            //                            else
+                            //                                {
+                            //                                    Robot.Drive(0, 0);
+                            //                                    Robot.targetAngleCounter++;
+                            //                                    if(Robot.targetAngleCounter > 25)
+                            //                                        {
+                            //                                            Robot.currentState = State.MOVING_BACKWARDS;
+                            //                                            Robot.driveTimeCounter = 0;
+                            //                                        }
+                            //                                }
+                            
                         case MOVING_BACKWARDS:
                             if(Robot.driveTimeCounter < 100)
                                 {
                                     Robot.Drive(-1, -1);
                                     Robot.driveTimeCounter++;
                                 }
-                            if(Robot.driveTimeCounter == 200)
+                            if(Robot.driveTimeCounter == 100)
                                 {
                                     Robot.currentState = State.STOPPING;
                                 }
@@ -258,7 +294,6 @@ public class Robot extends IterativeRobot implements PIDOutput
         @Override
         public void pidWrite(double output)
             {
-                rotateToAngleRate = output;
             }
             
         private static void Drive(double driveL, double driveR)
