@@ -2,7 +2,7 @@ package org.usfirst.frc.team5338.robot;
 
 import com.kauailabs.navx.frc.AHRS;
 
-import edu.wpi.first.wpilibj.CANTalon;
+import com.ctre.CANTalon; 
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.IterativeRobot;
@@ -257,7 +257,7 @@ public class Robot extends IterativeRobot implements PIDOutput
                         Robot.speed = 0.5;
                     }
 
-                Robot.Drive(Robot.XBOX.getRawAxis(1), Robot.XBOX.getRawAxis(3));
+                Robot.Drive(Robot.XBOX.getRawAxis(1), Robot.XBOX.getRawAxis(5));
 
                 // BACK - reverse
                 // START - forwards
