@@ -257,7 +257,7 @@ public class Robot extends IterativeRobot implements PIDOutput
                         Robot.speed = 0.5;
                     }
 
-                Robot.Drive(Robot.XBOX.getRawAxis(1), Robot.XBOX.getRawAxis(5));
+                Robot.Drive(Robot.XBOX.getRawAxis(1), Robot.XBOX.getRawAxis(3));
 
                 // BACK - reverse
                 // START - forwards
