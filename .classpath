@@ -1,17 +1,3 @@
-<<<<<<< HEAD
-<?xml version="1.0" encoding="UTF-8"?>
-<classpath>
-	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="var" path="wpilib" sourcepath="wpilib.sources"/>
-	<classpathentry kind="var" path="networktables" sourcepath="networktables.sources"/>
-	<classpathentry kind="var" path="opencv" sourcepath="opencv.sources"/>
-	<classpathentry kind="var" path="cscore" sourcepath="cscore.sources"/>
-	<classpathentry kind="var" path="navx-mxp"/>
-	<classpathentry kind="var" path="USERLIBS_DIR/CTRLib.jar"/>
-	<classpathentry kind="output" path="bin"/>
-</classpath>
-=======
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
@@ -28,4 +14,3 @@
 	<classpathentry kind="var" path="USERLIBS_DIR/niVisionWPI.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
->>>>>>> branch 'master' of https://github.com/RoboLoco2017/Java-Port-of-2016-Practice-Code
