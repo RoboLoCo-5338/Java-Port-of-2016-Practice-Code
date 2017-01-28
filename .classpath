@@ -2,21 +2,6 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry exported="true" kind="lib" path="C:/Users/gpmidi/wpilib/java/current/lib/NetworkTables.jar"/>
-	<classpathentry exported="true" kind="lib" path="C:/Users/gpmidi/wpilib/java/current/lib/WPILib.jar"/>
-	<classpathentry kind="lib" path="C:/Users/gpmidi/navx-mxp/java/lib/navx_frc.jar"/>
-	<classpathentry exported="true" kind="lib" path="C:/Users/gpmidi/wpilib/java/current/lib/NetworkTables-sources.jar"/>
-	<classpathentry exported="true" kind="lib" path="C:/Users/gpmidi/wpilib/java/current/lib/cscore.jar"/>
-	<classpathentry exported="true" kind="lib" path="C:/Users/gpmidi/wpilib/java/current/lib/cscore-sources.jar"/>
-	<classpathentry exported="true" kind="lib" path="C:/Users/gpmidi/wpilib/java/current/lib/opencv.jar"/>
-	<classpathentry exported="true" kind="lib" path="C:/Users/gpmidi/wpilib/java/current/lib/opencv-sources.jar"/>
-	<classpathentry exported="true" kind="lib" path="C:/Users/gpmidi/wpilib/java/current/lib/WPILib-sources.jar"/>
-	<classpathentry exported="true" kind="lib" path="C:/Users/gpmidi/wpilib/user/java/lib/navx_frc.jar"/>
-	<classpathentry kind="lib" path="C:/Users/gpmidi/wpilib/user/java/lib/CANJaguar.jar"/>
-	<classpathentry kind="lib" path="C:/Users/gpmidi/wpilib/user/java/lib/mindsensors.jar"/>
-	<classpathentry kind="lib" path="C:/Users/gpmidi/wpilib/user/java/lib/mindsensors-javadoc.jar"/>
-	<classpathentry kind="lib" path="C:/Users/gpmidi/wpilib/user/java/lib/niVisionWPI.jar"/>
-	<classpathentry kind="lib" path="C:/Users/gpmidi/wpilib/user/java/lib/CTRLib.jar"/>
 	<classpathentry kind="var" path="wpilib" sourcepath="wpilib.sources"/>
 	<classpathentry kind="var" path="networktables" sourcepath="networktables.sources"/>
 	<classpathentry kind="var" path="opencv" sourcepath="opencv.sources"/>
